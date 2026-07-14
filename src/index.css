@@ -1,0 +1,167 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html, body {
+    @apply bg-bg-deepest text-text-primary font-body antialiased;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body {
+    background: 
+      radial-gradient(ellipse at top, rgba(61, 43, 94, 0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at bottom, rgba(27, 40, 69, 0.1) 0%, transparent 50%),
+      linear-gradient(180deg, #0D0B1E 0%, #13111C 50%, #1A1528 100%);
+    background-attachment: fixed;
+  }
+
+  /* Noise texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  }
+
+  #root {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-bg-deep;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-bg-hover rounded-full;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gold-dark;
+    background-clip: content-box;
+  }
+
+  /* Hide scrollbar for horizontal scroll containers */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@layer components {
+  /* JRPG-style button base */
+  .btn-jrpg {
+    @apply relative inline-flex items-center justify-center gap-2 rounded-lg font-body font-semibold transition-all duration-200;
+    @apply px-5 py-2.5 text-sm;
+  }
+
+  .btn-jrpg-primary {
+    @apply bg-gradient-gold text-bg-deepest shadow-gold-glow-sm;
+    @apply hover:shadow-gold-glow hover:-translate-y-0.5;
+    @apply active:translate-y-0;
+  }
+
+  .btn-jrpg-secondary {
+    @apply bg-bg-elevated text-text-primary border border-bg-hover;
+    @apply hover:border-gold/40 hover:bg-bg-hover;
+  }
+
+  .btn-jrpg-ghost {
+    @apply text-text-secondary hover:text-gold-bright hover:bg-bg-elevated;
+  }
+
+  .btn-jrpg-danger {
+    @apply bg-red-900/30 text-red-400 border border-red-900/50;
+    @apply hover:bg-red-900/50;
+  }
+
+  /* Card with menu-window style */
+  .card-jrpg {
+    @apply bg-gradient-card rounded-xl border border-bg-hover shadow-card;
+    @apply transition-all duration-200;
+  }
+
+  .card-jrpg-hover {
+    @apply hover:border-gold/20 hover:shadow-card-hover hover:-translate-y-0.5;
+  }
+
+  /* Badge base */
+  .badge-base {
+    @apply inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold font-mono;
+  }
+
+  /* Gold text gradient */
+  .text-gold-gradient {
+    @apply bg-gradient-gold bg-clip-text text-transparent;
+  }
+
+  /* Shimmer effect for skeletons */
+  .shimmer {
+    @apply relative overflow-hidden bg-bg-elevated;
+  }
+
+  .shimmer::after {
+    content: '';
+    @apply absolute inset-0;
+    background: linear-gradient(90deg, transparent 0%, rgba(245, 181, 68, 0.05) 50%, transparent 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
