@@ -20,6 +20,12 @@ const CHECKOUT_BASE_URL = getCheckoutBaseUrl();
 export interface CreateCheckoutParams {
   productId: string;
   successUrl: string;
+  /**
+   * Optional metadata forwarded to Creem and echoed back in the webhook.
+   * The webhook relies on `metadata.user_id` + `metadata.coins` to credit
+   * the correct user securely (instead of trusting URL params on success).
+   */
+  metadata?: Record<string, unknown>;
 }
 
 export interface CreateCheckoutResult {
@@ -28,6 +34,11 @@ export interface CreateCheckoutResult {
 
 /**
  * Creates a Creem checkout session via Cloudflare Worker (prod) or local server (dev).
+ *
+ * The `metadata` is forwarded through to Creem so the webhook receiver can
+ * identify the purchasing user and the coin amount to credit. This is what
+ * makes the server-side crediting secure — the success page no longer grants
+ * coins from untrusted query parameters.
  */
 export async function createCreemCheckout(
   params: CreateCheckoutParams,
@@ -42,6 +53,7 @@ export async function createCreemCheckout(
     body: JSON.stringify({
       productId: params.productId,
       successUrl: params.successUrl,
+      metadata: params.metadata,
     }),
   });
 
@@ -62,4 +74,15 @@ export function buildSuccessUrl(
   coins: number,
 ): string {
   return `${baseUrl}/payment/success?productId=${encodeURIComponent(productId)}&coins=${coins}`;
+}
+
+/**
+ * Builds the success URL for a subscription checkout.
+ */
+export function buildSubscriptionSuccessUrl(
+  baseUrl: string,
+  productId: string,
+  planId: string,
+): string {
+  return `${baseUrl}/payment/success?productId=${encodeURIComponent(productId)}&type=subscription&planId=${encodeURIComponent(planId)}`;
 }

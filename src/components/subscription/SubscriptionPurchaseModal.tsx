@@ -1,42 +1,46 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ExternalLink, XCircle } from 'lucide-react';
-import type { CoinPack } from '@/types';
+import { Crown, ExternalLink, XCircle } from 'lucide-react';
+import type { SubscriptionPlan } from '@/types';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
-import { CoinIcon } from '@/components/coin/CoinIcon';
-import { formatCoinAmount, formatPrice } from '@/lib/format';
-import { createCreemCheckout, buildSuccessUrl } from '@/services/creem-api';
+import { formatPrice } from '@/lib/format';
+import { createCreemCheckout, buildSubscriptionSuccessUrl } from '@/services/creem-api';
 import { useAuthStore } from '@/stores/auth-store';
 
-export interface CoinPurchaseModalProps {
+export interface SubscriptionPurchaseModalProps {
   isOpen: boolean;
   onClose: () => void;
-  pack: CoinPack | null;
-  onSuccess?: (pack: CoinPack) => void;
-  onError?: (pack: CoinPack) => void;
+  plan: SubscriptionPlan | null;
+  onSuccess?: (plan: SubscriptionPlan) => void;
+  onError?: (plan: SubscriptionPlan) => void;
 }
 
 type Phase = 'confirm' | 'processing' | 'error';
 
 /**
- * Coin-pack purchase flow with Creem integration:
+ * Subscription purchase flow with Creem integration:
  *
- * 1. **confirm**   – pack summary with "Proceed to Checkout" / "Cancel".
- * 2. **processing** – spinner while creating the Creem checkout session.
- * 3. **error**     – error message with retry / close options.
+ * 1. **confirm**   - plan summary with "Start Free Trial" / "Cancel".
+ * 2. **processing** - spinner while creating the Creem checkout session.
+ * 3. **error**      - error message with retry / close options.
  *
- * On confirm, the modal calls the local server to create a Creem checkout
- * session and opens the checkout URL in a new browser tab. Coins are
- * credited on the PaymentSuccessPage when the user returns.
+ * On confirm, the modal calls the checkout proxy to create a Creem checkout
+ * session and opens the checkout URL in a new browser tab. Subscription status
+ * is updated when the user returns via the success page.
  */
-export function CoinPurchaseModal({ isOpen, onClose, pack, onSuccess, onError }: CoinPurchaseModalProps) {
+export function SubscriptionPurchaseModal({
+  isOpen,
+  onClose,
+  plan,
+  onSuccess,
+  onError,
+}: SubscriptionPurchaseModalProps) {
   const [phase, setPhase] = useState<Phase>('confirm');
   const [errorMsg, setErrorMsg] = useState('');
   const user = useAuthStore((s) => s.user);
 
-  // Reset to the confirm phase each time the modal opens.
   useEffect(() => {
     if (isOpen) {
       setPhase('confirm');
@@ -45,9 +49,9 @@ export function CoinPurchaseModal({ isOpen, onClose, pack, onSuccess, onError }:
   }, [isOpen]);
 
   const handleConfirm = async () => {
-    if (!pack?.creemProductId) {
-      onError?.(pack!);
-      setErrorMsg('This pack does not have a payment link configured.');
+    if (!plan?.creemProductId) {
+      onError?.(plan!);
+      setErrorMsg('This plan does not have a payment link configured.');
       setPhase('error');
       return;
     }
@@ -56,36 +60,36 @@ export function CoinPurchaseModal({ isOpen, onClose, pack, onSuccess, onError }:
     setErrorMsg('');
 
     try {
-      const successUrl = buildSuccessUrl(
+      const successUrl = buildSubscriptionSuccessUrl(
         window.location.origin,
-        pack.creemProductId,
-        pack.coins,
+        plan.creemProductId,
+        plan.id,
       );
 
-      // Pass user_id + coins in metadata so the webhook can credit the
-      // correct user server-side. The success page no longer grants coins
-      // from these (untrusted) URL params.
+      // Pass user_id in metadata so the webhook can activate the
+      // subscription for the correct user server-side.
       const { checkoutUrl } = await createCreemCheckout({
-        productId: pack.creemProductId,
+        productId: plan.creemProductId,
         successUrl,
         metadata: {
           user_id: user?.id ?? '',
-          coins: pack.coins,
-          type: 'coins',
-          product_id: pack.creemProductId,
+          type: 'subscription',
+          plan_id: plan.id,
+          period: plan.period,
+          product_id: plan.creemProductId,
         },
       });
 
       // Open the Creem checkout in a new tab
       window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
 
-      // Close the modal - coins will be credited on the success page
-      onSuccess?.(pack);
+      // Close the modal - subscription will be activated on success page
+      onSuccess?.(plan);
       onClose();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create checkout session';
       setErrorMsg(message);
-      onError?.(pack!);
+      onError?.(plan!);
       setPhase('error');
     }
   };
@@ -100,9 +104,11 @@ export function CoinPurchaseModal({ isOpen, onClose, pack, onSuccess, onError }:
 
   const closeOnOverlay = phase === 'confirm' || phase === 'error';
 
+  const periodLabel = plan?.period === 'monthly' ? '/mo' : '/yr';
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="sm" closeOnOverlay={closeOnOverlay}>
-      {pack && (
+      {plan && (
         <AnimatePresence mode="wait">
           {/* Confirm */}
           {phase === 'confirm' && (
@@ -115,18 +121,28 @@ export function CoinPurchaseModal({ isOpen, onClose, pack, onSuccess, onError }:
               className="space-y-4"
             >
               <div className="text-center">
-                <h2 className="font-display text-lg text-gold-bright">Confirm Purchase</h2>
-                <p className="mt-1 text-xs text-text-secondary">Review your coin pack below.</p>
+                <h2 className="font-display text-lg text-gold-bright">Confirm Subscription</h2>
+                <p className="mt-1 text-xs text-text-secondary">
+                  Start your free trial. Cancel anytime.
+                </p>
               </div>
 
               <div className="flex flex-col items-center rounded-lg border border-bg-hover bg-bg-elevated p-4">
-                <CoinIcon size={48} />
-                <span className="mt-2 font-display text-2xl font-bold text-gold-bright">
-                  {formatCoinAmount(pack.coins)}
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-gold/40 bg-bg-deepest/50">
+                  <Crown size={24} className="text-gold-bright" />
+                </div>
+                <span className="mt-2 font-display text-lg font-bold text-gold-bright">
+                  {plan.name}
                 </span>
-                <span className="text-[11px] uppercase tracking-wide text-text-muted">Coins</span>
-                <span className="mt-2 font-display text-lg text-text-primary">
-                  {formatPrice(pack.price)}
+                <span className="text-[11px] uppercase tracking-wide text-text-muted">
+                  Subscription
+                </span>
+                <span className="mt-2 font-display text-2xl text-text-primary">
+                  {formatPrice(plan.price)}
+                  <span className="ml-0.5 text-xs text-text-muted">{periodLabel}</span>
+                </span>
+                <span className="mt-1 text-[11px] text-status-free font-medium">
+                  {plan.trialDays}-day free trial
                 </span>
               </div>
 
@@ -134,8 +150,13 @@ export function CoinPurchaseModal({ isOpen, onClose, pack, onSuccess, onError }:
                 <Button variant="secondary" fullWidth onClick={onClose}>
                   Cancel
                 </Button>
-                <Button variant="primary" fullWidth onClick={handleConfirm} rightIcon={<ExternalLink size={16} />}>
-                  Proceed to Checkout
+                <Button
+                  variant="primary"
+                  fullWidth
+                  onClick={handleConfirm}
+                  rightIcon={<ExternalLink size={16} />}
+                >
+                  Start Free Trial
                 </Button>
               </div>
             </motion.div>
@@ -152,7 +173,7 @@ export function CoinPurchaseModal({ isOpen, onClose, pack, onSuccess, onError }:
             >
               <Spinner size="lg" />
               <p className="font-display text-sm text-gold-bright">Creating checkout...</p>
-              <p className="text-xs text-text-muted">Opening payment page</p>
+              <p className="text-xs text-text-muted">Opening subscription page</p>
             </motion.div>
           )}
 
@@ -188,4 +209,4 @@ export function CoinPurchaseModal({ isOpen, onClose, pack, onSuccess, onError }:
   );
 }
 
-export default CoinPurchaseModal;
+export default SubscriptionPurchaseModal;

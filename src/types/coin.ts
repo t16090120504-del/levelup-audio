@@ -36,4 +36,6 @@ export interface SubscriptionPlan {
   period: 'monthly' | 'yearly';
   features: string[];
   trialDays: number;
+  /** Creem product ID for checkout integration */
+  creemProductId?: string;
 }

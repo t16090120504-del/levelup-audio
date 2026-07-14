@@ -32,7 +32,7 @@ export function MiniPlayer() {
           animate={{ height: 'auto', opacity: 1 }}
           exit={{ height: 0, opacity: 0 }}
           transition={{ duration: 0.25, ease: 'easeInOut' }}
-          className="fixed inset-x-0 bottom-[env(safe-area-inset-bottom)] z-40 overflow-hidden"
+          className="fixed inset-x-0 z-40 overflow-hidden"
           style={{ bottom: 'calc(3.5rem + env(safe-area-inset-bottom))' }}
         >
           {/* Main mini player bar */}

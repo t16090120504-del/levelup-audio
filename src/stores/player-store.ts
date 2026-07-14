@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Episode, Series } from '@/types/content';
 import { audioEngine } from '@/services/audio-engine';
+import { useEngagementStore } from '@/stores/engagement-store';
 
 interface PlayerStoreState {
   currentEpisode: Episode | null;
@@ -54,6 +55,13 @@ export const usePlayerStore = create<PlayerStoreState>()((set, get) => {
       isPlaying: true,
       isBuffering: true,
     });
+    // Count this as an episode "played" for engagement signals (e.g. the
+    // signup prompt). Fire-and-forget; never blocks playback.
+    try {
+      useEngagementStore.getState().incrementEpisodesPlayed();
+    } catch {
+      // ignore — engagement tracking must never break playback
+    }
   }
 
   return {

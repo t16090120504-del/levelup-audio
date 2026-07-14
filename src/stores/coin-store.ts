@@ -16,6 +16,8 @@ interface CoinState {
     description: string,
     referenceId?: string,
   ) => void;
+  /** Sync the local balance cache with the authoritative server balance (no transaction recorded). */
+  syncBalance: (newBalance: number) => void;
   spendCoins: (amount: number, referenceId: string, description: string) => boolean;
   canClaimDailyBonus: () => boolean;
   claimDailyBonus: () => number;
@@ -58,6 +60,10 @@ export const useCoinStore = create<CoinState>()(
             transactions: [transaction, ...state.transactions],
           };
         });
+      },
+
+      syncBalance: (newBalance) => {
+        set({ balance: newBalance });
       },
 
       spendCoins: (amount, referenceId, description) => {

@@ -4,12 +4,15 @@ import type { Series, Episode } from '@/types';
 import { apiClient } from '@/services/api/client';
 import { usePlayerStore } from '@/stores/player-store';
 import { useContentStore } from '@/stores/content-store';
+import { trackSeriesView } from '@/services/analytics';
 import { BannerCarousel } from '@/components/content/BannerCarousel';
 import { DailyBonus } from '@/components/coin/DailyBonus';
 import { HorizontalSeriesRow } from '@/components/content/HorizontalSeriesRow';
 import { EpisodeItem } from '@/components/content/EpisodeItem';
 import { SectionHeader } from '@/components/content/SectionHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { StreakBadge } from '@/components/streak/StreakBadge';
+import { SignupPromptBanner } from '@/components/auth/SignupPromptBanner';
 
 function getEpisodeStatus(
   episode: Episode,
@@ -28,6 +31,7 @@ export default function HomePage() {
   const getProgress = useContentStore((s) => s.getProgress);
 
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [bannerSeries, setBannerSeries] = useState<Series[]>([]);
   const [trending, setTrending] = useState<Series[]>([]);
   const [newEpisodes, setNewEpisodes] = useState<Episode[]>([]);
@@ -57,6 +61,7 @@ export default function HomePage() {
         setTopRated(topRatedRes);
       } catch (err) {
         console.error('Failed to load home data:', err);
+        if (!cancelled) setError(true);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -69,6 +74,7 @@ export default function HomePage() {
   }, []);
 
   const handleSeriesClick = (series: Series) => {
+    trackSeriesView(series);
     navigate(`/series/${series.id}`);
   };
 
@@ -85,9 +91,23 @@ export default function HomePage() {
 
   const hasSubscription = false;
 
+  if (error) {
+    return (
+      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4 text-center">
+        <p className="text-text-secondary">Something went wrong. Please refresh.</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="btn-jrpg btn-jrpg-primary"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
-      <div className="space-y-6 px-4 pt-4 pb-28">
+      <div className="space-y-6 pb-28">
         <Skeleton variant="rect" className="h-60 w-full rounded-2xl" />
         <Skeleton variant="rect" className="h-24 w-full rounded-xl" />
 
@@ -120,7 +140,16 @@ export default function HomePage() {
   }
 
   return (
-    <div className="space-y-6 px-4 pt-4 pb-28">
+    <div className="space-y-6 pb-28">
+      {/* Header row: greeting + streak badge */}
+      <div className="flex items-center justify-between">
+        <h1 className="font-display text-2xl text-gold-bright">Home</h1>
+        <StreakBadge />
+      </div>
+
+      {/* Email capture banner (shown to engaged non-registered users) */}
+      <SignupPromptBanner />
+
       {/* Banner */}
       <BannerCarousel series={bannerSeries} onSeriesClick={handleSeriesClick} />
 

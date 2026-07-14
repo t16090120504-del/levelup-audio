@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Wallet, Sparkles } from 'lucide-react';
-import type { CoinPack } from '@/types';
+import type { CoinPack, SubscriptionPlan } from '@/types';
 import { COIN_PACKS } from '@/constants/coin-packs';
 import { SUBSCRIPTION_PLANS } from '@/constants/subscription';
 import { useCoinStore } from '@/stores/coin-store';
@@ -9,12 +9,13 @@ import { useToastStore } from '@/stores/toast-store';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
 import { formatCoinAmount } from '@/lib/format';
+import { trackCoinPurchase } from '@/services/analytics';
 import { CoinBalanceBadge } from '@/components/coin/CoinBalanceBadge';
 import { CoinPackCard } from '@/components/coin/CoinPackCard';
 import { CoinPurchaseModal } from '@/components/coin/CoinPurchaseModal';
 import { SubscriptionBanner } from '@/components/subscription/SubscriptionBanner';
 import { SubscriptionCard } from '@/components/subscription/SubscriptionCard';
-import { Paywall } from '@/components/subscription/Paywall';
+import { SubscriptionPurchaseModal } from '@/components/subscription/SubscriptionPurchaseModal';
 import { Card } from '@/components/ui/Card';
 
 export default function StorePage() {
@@ -24,14 +25,17 @@ export default function StorePage() {
 
   const [selectedPack, setSelectedPack] = useState<CoinPack | null>(null);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
-  const [isPaywallOpen, setIsPaywallOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
+  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
 
   const handlePurchaseClick = useCallback((pack: CoinPack) => {
+    trackCoinPurchase(pack.id, pack.coins, 'initiated', { price: pack.price });
     setSelectedPack(pack);
     setIsPurchaseModalOpen(true);
   }, []);
 
   const handlePurchaseSuccess = useCallback((pack: CoinPack) => {
+    trackCoinPurchase(pack.id, pack.coins, 'success', { price: pack.price });
     addToast({
       type: 'success',
       title: 'Purchase Successful',
@@ -40,6 +44,7 @@ export default function StorePage() {
   }, [addToast]);
 
   const handlePurchaseError = useCallback((_pack: CoinPack) => {
+    trackCoinPurchase(_pack.id, _pack.coins, 'failed', { price: _pack.price });
     addToast({
       type: 'error',
       title: 'Purchase Failed',
@@ -47,24 +52,39 @@ export default function StorePage() {
     });
   }, [addToast]);
 
-  const handleSubscribeClick = useCallback(() => {
-    setIsPaywallOpen(true);
+  const handleSubscribeCardClick = useCallback((plan: SubscriptionPlan) => {
+    setSelectedPlan(plan);
+    setIsSubscriptionModalOpen(true);
   }, []);
 
-  const handleSubscribe = useCallback(
-    async (_planId: 'monthly' | 'yearly') => {
-      // In a real app, this would call apiClient.payment.subscribe(planId)
-      // For now we simulate success and show a toast
-      setIsPaywallOpen(false);
-      addToast({
-        type: 'success',
-        title: 'Subscription Activated',
-        message: 'You now have unlimited access to all premium content!',
-        duration: 5000,
-      });
-    },
-    [addToast],
-  );
+  /**
+   * When the user clicks "Start Free Trial" from the banner,
+   * open the subscription modal with the monthly plan by default.
+   */
+  const handleBannerSubscribe = useCallback(() => {
+    const monthly = SUBSCRIPTION_PLANS.find((p) => p.period === 'monthly');
+    if (monthly) {
+      setSelectedPlan(monthly);
+      setIsSubscriptionModalOpen(true);
+    }
+  }, []);
+
+  const handleSubscriptionSuccess = useCallback((_plan: SubscriptionPlan) => {
+    addToast({
+      type: 'success',
+      title: 'Checkout Opened',
+      message: 'Complete your subscription in the new tab. Your access will be activated automatically.',
+      duration: 5000,
+    });
+  }, [addToast]);
+
+  const handleSubscriptionError = useCallback((_plan: SubscriptionPlan) => {
+    addToast({
+      type: 'error',
+      title: 'Subscription Failed',
+      message: 'Something went wrong while creating the checkout. Please try again.',
+    });
+  }, [addToast]);
 
   return (
     <div className="space-y-8 pb-8">
@@ -122,7 +142,7 @@ export default function StorePage() {
       <section>
         <h2 className="mb-4 font-display text-xl text-gold-bright">Subscriptions</h2>
         <div className="space-y-4">
-          <SubscriptionBanner onSubscribe={handleSubscribeClick} />
+          <SubscriptionBanner onSubscribe={handleBannerSubscribe} />
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {SUBSCRIPTION_PLANS.map((plan, index) => (
@@ -132,7 +152,7 @@ export default function StorePage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: 0.1 + index * 0.05 }}
               >
-                <SubscriptionCard plan={plan} onSubscribe={handleSubscribeClick} />
+                <SubscriptionCard plan={plan} onSubscribe={handleSubscribeCardClick} />
               </motion.div>
             ))}
           </div>
@@ -163,10 +183,12 @@ export default function StorePage() {
         onError={handlePurchaseError}
       />
 
-      <Paywall
-        isOpen={isPaywallOpen}
-        onClose={() => setIsPaywallOpen(false)}
-        onSubscribe={handleSubscribe}
+      <SubscriptionPurchaseModal
+        isOpen={isSubscriptionModalOpen}
+        onClose={() => setIsSubscriptionModalOpen(false)}
+        plan={selectedPlan}
+        onSuccess={handleSubscriptionSuccess}
+        onError={handleSubscriptionError}
       />
     </div>
   );

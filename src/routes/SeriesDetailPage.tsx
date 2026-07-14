@@ -399,7 +399,7 @@ export default function SeriesDetailPage() {
         <div
           ref={listParentRef}
           className="space-y-1"
-          style={{ maxHeight: 'calc(100vh - 420px)', overflowY: 'auto' }}
+          style={{ maxHeight: 'calc(100dvh - 420px)', overflowY: 'auto' }}
         >
           <div
             style={{

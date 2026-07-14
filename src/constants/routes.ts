@@ -11,4 +11,10 @@ export const ROUTES = {
   ONBOARDING: '/onboarding',
   AUTH: '/auth',
   PAYMENT_SUCCESS: '/payment/success',
+  // Admin
+  ADMIN: '/admin',
+  ADMIN_DASHBOARD: '/admin/dashboard',
+  ADMIN_SERIES: '/admin/series',
+  ADMIN_EPISODES: '/admin/episodes',
+  ADMIN_USERS: '/admin/users',
 } as const;

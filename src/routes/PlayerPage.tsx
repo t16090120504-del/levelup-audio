@@ -7,6 +7,7 @@ import { usePlayerStore } from '@/stores/player-store';
 import { useContentStore } from '@/stores/content-store';
 import { audioEngine } from '@/services/audio-engine';
 import { apiClient } from '@/services/api/client';
+import { trackEpisodePlay, trackEpisodeComplete } from '@/services/analytics';
 import type { Episode, Series } from '@/types';
 
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -199,12 +200,33 @@ export default function PlayerPage() {
     };
   }, [episodeId, storeCurrentEpisode, storeCurrentSeries, playEpisode]);
 
+  // Track an "episode_play" analytics event once per episode when it starts playing.
+  const trackedPlayIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!episode || !isPlaying) return;
+    if (trackedPlayIdRef.current === episode.id) return;
+    trackedPlayIdRef.current = episode.id;
+    trackEpisodePlay(episode);
+  }, [episode, isPlaying]);
+
+  // Keep a ref to the current episode so the audio 'ended' handler can read
+  // the latest value without re-subscribing on every episode change.
+  const episodeRef = useRef<Episode | null>(null);
+  useEffect(() => {
+    episodeRef.current = episode;
+  }, [episode]);
+
   // Subscribe to audio engine events
   useEffect(() => {
     const onTimeUpdate = (time: number | Event | undefined) => {
       if (typeof time === 'number') _onTimeUpdate(time);
     };
-    const onEnded = () => _onEnded();
+    const onEnded = () => {
+      // Track completion for the episode that just finished (before the store
+      // possibly advances to the next one via auto-play).
+      if (episodeRef.current) trackEpisodeComplete(episodeRef.current);
+      _onEnded();
+    };
     const onLoadedMetadata = (duration: number | Event | undefined) => {
       if (typeof duration === 'number') _onLoadedMetadata(duration);
     };

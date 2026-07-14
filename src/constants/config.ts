@@ -12,6 +12,12 @@ export const CONFIG = {
   INITIAL_COIN_BALANCE: 100,
   /** Coins awarded for the daily login bonus. */
   DAILY_BONUS_COINS: 20,
+  /** Coins awarded when a user reaches a 7-day login streak. */
+  STREAK_BONUS_7_DAY: 50,
+  /** Coins awarded when a user reaches a 30-day login streak. */
+  STREAK_BONUS_30_DAY: 200,
+  /** Engagement threshold (episodes played) before showing the signup prompt. */
+  SIGNUP_PROMPT_EPISODE_THRESHOLD: 2,
   /** Supabase project URL (from environment variables). */
   VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
   /** Supabase anon public key (from environment variables). */

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Series, Genre } from '@/types';
 import { apiClient } from '@/services/api/client';
+import { trackSearch } from '@/services/analytics';
 import { SearchBar } from '@/components/ui/SearchBar';
 import { GenreFilterBar } from '@/components/content/GenreFilterBar';
 import { SeriesCard } from '@/components/content/SeriesCard';
@@ -81,6 +82,7 @@ export default function BrowsePage() {
         .searchSeries(trimmed)
         .then((results) => {
           setSearchResults(results);
+          trackSearch(trimmed, results.length);
         })
         .catch((err) => console.error('Search failed:', err))
         .finally(() => setSearching(false));
@@ -148,7 +150,7 @@ export default function BrowsePage() {
   const isLoading = loading || searching;
 
   return (
-    <div className="space-y-4 px-4 pt-4 pb-28">
+    <div className="space-y-4 pb-28">
       <SearchBar
         value={searchQuery}
         onChange={setSearchQuery}
