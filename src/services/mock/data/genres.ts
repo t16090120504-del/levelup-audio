@@ -55,4 +55,12 @@ export const genres: Genre[] = [
     description: 'Powers, costumes, and saving the world',
     sortOrder: 7,
   },
+  {
+    id: 'genre-workplace-power-fantasy',
+    name: 'Workplace Power Fantasy',
+    slug: 'workplace-power-fantasy',
+    description:
+      'Rise from the bottom to the top. Office politics, corporate warfare, and the underdog who outsmarts everyone.',
+    sortOrder: 8,
+  },
 ];

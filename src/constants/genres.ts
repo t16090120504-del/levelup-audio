@@ -10,6 +10,7 @@ export const GENRE_SLUGS = [
   'isekai',
   'urban-fantasy',
   'superhero',
+  'workplace-power-fantasy',
 ] as const;
 
 /** Union type of all valid genre slugs. */
