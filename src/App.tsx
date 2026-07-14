@@ -27,6 +27,7 @@ const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage')
 const AdminSeriesPage = lazy(() => import('@/pages/admin/AdminSeriesPage'));
 const AdminEpisodesPage = lazy(() => import('@/pages/admin/AdminEpisodesPage'));
 const AdminUsersPage = lazy(() => import('@/pages/admin/AdminUsersPage'));
+const AdminReviewPage = lazy(() => import('@/pages/admin/AdminReviewPage'));
 const AdminLayout = lazy(() => import('@/components/admin/AdminLayout'));
 
 /**
@@ -101,6 +102,14 @@ export default function App() {
               element={
                 <AdminLayout>
                   <AdminEpisodesPage />
+                </AdminLayout>
+              }
+            />
+            <Route
+              path={ROUTES.ADMIN_REVIEW}
+              element={
+                <AdminLayout>
+                  <AdminReviewPage />
                 </AdminLayout>
               }
             />

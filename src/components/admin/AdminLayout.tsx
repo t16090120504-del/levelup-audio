@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   BookOpen,
   Headphones,
+  Eye,
   Users,
   LogOut,
   ShieldCheck,
@@ -22,6 +23,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: ROUTES.ADMIN_DASHBOARD, label: 'Dashboard', icon: LayoutDashboard },
   { to: ROUTES.ADMIN_SERIES, label: 'Series', icon: BookOpen },
   { to: ROUTES.ADMIN_EPISODES, label: 'Episodes', icon: Headphones },
+  { to: ROUTES.ADMIN_REVIEW, label: 'Review', icon: Eye },
   { to: ROUTES.ADMIN_USERS, label: 'Users', icon: Users },
 ];
 
