@@ -1,56 +1,55 @@
 # ============================================================
-# LevelUp Audio - 一键生成 + 上传
+# LevelUp Audio - 一键生成 + 上传（修复版 v2）
 # 复制粘贴到 Google Colab 的一个代码格子里，点运行即可
-# 生成70个音频 + 上传到Supabase，全部自动完成
 # ============================================================
 
 # 第1步：安装依赖
-!pip install edge-tts supabase -q
+!pip install edge-tts requests -q
 
 # 第2步：下载项目剧本
 !git clone https://github.com/t16090120504-del/levelup-audio.git /content/levelup-audio 2>/dev/null
 print("✅ 项目下载完成\n")
 
 # 第3步：生成 + 上传
-import asyncio, edge_tts, os, re
+import asyncio, edge_tts, os, re, requests
 from datetime import datetime
-from supabase import create_client
 
 # Supabase 配置
 SUPABASE_URL = "https://ihfaoksiurmucryfzfvd.supabase.co"
 SUPABASE_KEY = "sb_publishable_cLvmBr7GYj_BUh7gmwvg0g_ZmiBg6va"
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 BUCKET = "audio"
 
 SERIES_CONFIG = [
     {"name": "The Last System", "script": "the-last-system-season1.md",
-     "voice": "en-US-AndrewMultilingualNeural", "output": "audio-the-last-system",
-     "storage": "series/the-last-system"},
+     "voice": "en-US-AndrewMultilingualNeural", "storage": "series/the-last-system"},
     {"name": "The Corporate Ascendant", "script": "corporate-ascendant-season1.md",
-     "voice": "en-US-ChristopherNeural", "output": "audio-corporate-ascendant",
-     "storage": "series/corporate-ascendant"},
+     "voice": "en-US-ChristopherNeural", "storage": "series/corporate-ascendant"},
     {"name": "Infinite Loop", "script": "infinite-loop-season1.md",
-     "voice": "en-US-GuyNeural", "output": "audio-infinite-loop",
-     "storage": "series/infinite-loop"},
+     "voice": "en-US-GuyNeural", "storage": "series/infinite-loop"},
     {"name": "Jade Dynasty", "script": "jade-dynasty-season1.md",
-     "voice": "en-US-SteffanNeural", "output": "audio-jade-dynasty",
-     "storage": "series/jade-dynasty"},
+     "voice": "en-US-SteffanNeural", "storage": "series/jade-dynasty"},
     {"name": "Midnight Protocol", "script": "midnight-protocol-season1.md",
-     "voice": "en-US-AvaNeural", "output": "audio-midnight-protocol",
-     "storage": "series/midnight-protocol"},
+     "voice": "en-US-AvaNeural", "storage": "series/midnight-protocol"},
     {"name": "Reborn Dragon", "script": "reborn-dragon-season1.md",
-     "voice": "en-US-EmmaMultilingualNeural", "output": "audio-reborn-dragon",
-     "storage": "series/reborn-dragon"},
+     "voice": "en-US-EmmaMultilingualNeural", "storage": "series/reborn-dragon"},
     {"name": "Stone Heart", "script": "stone-heart-season1.md",
-     "voice": "en-US-BrianMultilingualNeural", "output": "audio-stone-heart",
-     "storage": "series/stone-heart"},
+     "voice": "en-US-BrianMultilingualNeural", "storage": "series/stone-heart"},
     {"name": "Zero Hour", "script": "zero-hour-season1.md",
-     "voice": "en-US-EricNeural", "output": "audio-zero-hour",
-     "storage": "series/zero-hour"},
+     "voice": "en-US-EricNeural", "storage": "series/zero-hour"},
 ]
 
 SCRIPTS_DIR = "/content/levelup-audio/assets/scripts"
-BASE_OUTPUT = "/content/output"
+
+def upload_to_supabase(storage_path, file_data):
+    """用 requests 上传到 Supabase Storage"""
+    url = f"{SUPABASE_URL}/storage/v1/object/{BUCKET}/{storage_path}"
+    headers = {
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "audio/mpeg",
+    }
+    params = {"upsert": "true"}
+    resp = requests.put(url, headers=headers, params=params, data=file_data)
+    return resp.status_code in (200, 201)
 
 def extract_episodes(filepath):
     with open(filepath, "r", encoding="utf-8") as f:
@@ -82,55 +81,43 @@ def clean(t):
     return re.sub(r' {2,}', ' ', c).strip()
 
 async def gen_and_upload(cfg):
-    """生成一个系列并立即上传到Supabase"""
     sp = os.path.join(SCRIPTS_DIR, cfg["script"])
-    od = os.path.join(BASE_OUTPUT, cfg["output"])
-    
     if not os.path.exists(sp):
         print(f"  ⚠️ 跳过: {cfg['script']} 不存在")
         return 0, 0
     
     eps = extract_episodes(sp)
     print(f"\n{'='*55}")
-    print(f"  📖 {cfg['name']}")
-    print(f"  🎙️ {cfg['voice']} | {len(eps)} 集")
-    print(f"  📤 上传路径: {cfg['storage']}")
+    print(f"  📖 {cfg['name']}  |  🎙️ {cfg['voice']}  |  {len(eps)} 集")
     print(f"{'='*55}")
     
     generated = 0
     uploaded = 0
     
     for n, t, txt in eps:
-        # 生成音频
-        os.makedirs(od, exist_ok=True)
-        safe = re.sub(r'[^a-zA-Z0-9\s-]', '', t).strip().lower()
-        safe = re.sub(r'\s+', '-', safe)[:50]
-        local_file = os.path.join(od, f"ep{n:02d}-{safe}.mp3")
-        
         ct = clean(txt)
         if len(ct) < 20:
             continue
         
+        tmp = f"/tmp/ep{n:02d}.mp3"
         c = edge_tts.Communicate(ct, cfg["voice"], rate="-5%")
-        await c.save(local_file)
+        await c.save(tmp)
         generated += 1
         
-        # 立即上传到Supabase
-        storage_path = f"{cfg['storage']}/ep{n:02d}.mp3"
-        with open(local_file, "rb") as f:
+        with open(tmp, "rb") as f:
             data = f.read()
         
-        result = supabase.storage.from_(BUCKET).upload(
-            storage_path, data,
-            {"content-type": "audio/mpeg", "upsert": True}
-        )
+        storage_path = f"{cfg['storage']}/ep{n:02d}.mp3"
+        ok = upload_to_supabase(storage_path, data)
         
-        if result:
+        if ok:
             uploaded += 1
             sz = len(data) / 1024
             print(f"  ✅ Ep{n}: {t} ({sz:.0f} KB) → 上传成功")
         else:
             print(f"  ❌ Ep{n}: {t} → 上传失败")
+        
+        os.remove(tmp)
     
     return generated, uploaded
 
@@ -138,7 +125,6 @@ async def main():
     print(f"{'='*55}")
     print(f"  🎧 LevelUp Audio - 一键生成+上传")
     print(f"  ⏰ {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"  📚 共 {len(SERIES_CONFIG)} 个系列")
     print(f"{'='*55}")
     
     total_gen = 0
@@ -156,6 +142,6 @@ async def main():
     print(f"  ✅ 上传: {total_up} 个到 Supabase")
     print(f"  ⏰ {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'='*55}")
-    print(f"\n🌐 现在刷新你的网站，就能听到新音频了！")
+    print(f"\n🌐 刷新网站就能听到新音频了！")
 
 await main()
